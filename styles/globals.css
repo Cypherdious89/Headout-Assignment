@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -11,6 +12,7 @@ body {
   background: linear-gradient(135deg, #f5f0ff 0%, #e0d0ff 100%);
   color: #333;
   min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
 }
 
 .text-accent {
