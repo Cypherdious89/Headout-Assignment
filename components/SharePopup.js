@@ -372,7 +372,7 @@ const SharePopup = ({
               >
                 {comparisonResult.status === "win" ? (
                   <p>
-                    I beat {challengeInfo.username}'s score of{" "}
+                    I beat {challengeInfo.username}`s score of{" "}
                     {challengeInfo.score}/{totalQuestions}!
                   </p>
                 ) : comparisonResult.status === "loss" ? (

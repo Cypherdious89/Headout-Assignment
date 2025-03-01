@@ -13,7 +13,7 @@ const WelcomeModal = ({ onStart, challengeInfo }) => {
             <div className="flex items-center mb-2">
               <Trophy className="text-yellow-500 w-6 h-6 mr-2" />
               <h3 className="font-bold text-lg text-accent">
-                You've Been Challenged!
+                You`ve Been Challenged!
               </h3>
             </div>
 

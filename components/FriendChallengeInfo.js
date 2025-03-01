@@ -18,7 +18,7 @@ const FriendChallengeInfo = ({ friendUsername, friendScore, onDismiss }) => {
           <Trophy className="text-yellow-500 w-8 h-8 mr-3" />
           <div>
             <div className="flex items-center mb-1">
-              <h3 className="font-bold text-lg mr-2">Friend's Challenge!</h3>
+              <h3 className="font-bold text-lg mr-2">Friend`s Challenge!</h3>
               {friendUsername && (
                 <div className="flex items-center bg-white bg-opacity-70 px-3 py-1 rounded-full">
                   <User className="text-accent w-4 h-4 mr-1" />
