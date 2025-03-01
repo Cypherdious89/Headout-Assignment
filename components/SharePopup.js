@@ -24,21 +24,24 @@ const SharePopup = ({
   const [linkCopied, setLinkCopied] = useState(false);
   const [isUsernameSubmitted, setIsUsernameSubmitted] = useState(!!username);
 
-  // Generate a unique game ID to track who invited whom
-  const [gameId, setGameId] = useState(
-    btoa(`game_${Date.now()}_${score.correct}`)
-  );
+  // Always generate a new unique game ID when component mounts
+  // This ensures each new challenge gets a unique ID
+  const [gameId, setGameId] = useState("");
   const [shareUrl, setShareUrl] = useState("");
 
   useEffect(() => {
-    // If already saved to DB (via challenge response), use that ID
-    const savedId = challengeInfo?.fromId || gameId;
-    setGameId(savedId);
+    // Generate a fresh game ID when the component mounts
+    const newGameId = btoa(
+      `game_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${
+        score.correct
+      }`
+    );
+    setGameId(newGameId);
 
     // Create share URL with the score and game ID embedded
-    const url = `${window.location.origin}${window.location.pathname}?challenge=${savedId}&score=${score.correct}`;
+    const url = `${window.location.origin}${window.location.pathname}?challenge=${newGameId}&score=${score.correct}`;
     setShareUrl(url);
-  }, [challengeInfo, gameId, score.correct]);
+  }, [score.correct]);
 
   // Check username availability after user stops typing
   useEffect(() => {
@@ -122,6 +125,7 @@ const SharePopup = ({
       }
 
       const data = await response.json();
+      // Use the returned gameId from the server
       setGameId(data.gameId);
 
       // Update share URL with new game ID
@@ -409,8 +413,10 @@ const SharePopup = ({
               (!localUsername || !isAvailable || isChecking)
             }
           >
-            <Share className="w-5 h-5 mr-2" />
-            Share on WhatsApp
+            <div className="flex items-center justify-center w-full">
+              <Share className="w-5 h-5 mr-2" />
+              <span>Share on WhatsApp</span>
+            </div>
           </StylizedButton>
 
           <StylizedButton
@@ -423,17 +429,19 @@ const SharePopup = ({
               (!localUsername || !isAvailable || isChecking)
             }
           >
-            {linkCopied ? (
-              <>
-                <Check className="w-5 h-5 mr-2" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Clipboard className="w-5 h-5 mr-2" />
-                Copy Challenge Link
-              </>
-            )}
+            <div className="flex items-center justify-center w-full">
+              {linkCopied ? (
+                <>
+                  <Check className="w-5 h-5 mr-2" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Clipboard className="w-5 h-5 mr-2" />
+                  <span>Copy Challenge Link</span>
+                </>
+              )}
+            </div>
           </StylizedButton>
         </div>
       </div>

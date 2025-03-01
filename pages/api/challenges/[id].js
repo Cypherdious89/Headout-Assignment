@@ -4,7 +4,8 @@ import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
   const { id } = req.query;
-  
+
+  // Use the id as string directly, no need to convert
   const gameId = id.toString();
 
   if (!id) {
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
 
     const db = mongoose.connection.db;
 
+    // Find the game with the provided ID
     const game = await db.collection("games").findOne({ _id: gameId });
 
     if (!game) {
@@ -35,6 +37,7 @@ export default async function handler(req, res) {
         username: game.username,
         score: game.score,
         playedAt: game.playedAt,
+        fromId: gameId, // Include the original gameId for reference
       },
       userInfo: user
         ? {
