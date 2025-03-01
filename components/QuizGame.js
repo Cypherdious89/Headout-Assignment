@@ -1,10 +1,8 @@
 // /components/QuizGame.js
 import { useState, useEffect } from "react";
 import Confetti from "./Confetti";
-import sampleData from "../data/sampleData.json";
 import GameResultModal from "./GameResultModal";
 import StylizedButton from "./StylizedButton";
-import FriendChallengeInfo from "./FriendChallengeInfo";
 
 const QuizGame = () => {
   const [destinations, setDestinations] = useState([]);
@@ -17,29 +15,87 @@ const QuizGame = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [gameComplete, setGameComplete] = useState(false);
   const [challengeInfo, setChallengeInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [username, setUsername] = useState(null);
 
+  const questionCount = 10;
+  // Fetch destinations from API on mount
   useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const response = await fetch("/api/destinations");
+        if (!response.ok) {
+          throw new Error("Failed to fetch destinations");
+        }
+        const data = await response.json();
+        setDestinations(data);
+        generateNewQuestion(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching destinations:", error);
+        setError(error.message);
+        setIsLoading(false);
+      }
+    };
+
     // Check URL parameters for friend challenge
     const urlParams = new URLSearchParams(window.location.search);
-    const fromId = urlParams.get("from");
-    const friendScore = urlParams.get("score");
+    const challengeId = urlParams.get("challenge");
 
-    if (fromId && friendScore) {
-      setChallengeInfo({
-        fromId,
-        score: parseInt(friendScore, 10),
-      });
+    if (challengeId) {
+      fetchChallengeInfo(challengeId);
     }
 
-    // In a real app, this would be an API call
-    setDestinations(sampleData);
-    generateNewQuestion(sampleData);
+    // Try to get stored username from sessionStorage
+    const storedUsername = sessionStorage.getItem("quizUsername");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+
+    fetchDestinations();
   }, []);
 
+  const fetchChallengeInfo = async (challengeId) => {
+    try {
+      // Also get the score from URL if available
+      const urlParams = new URLSearchParams(window.location.search);
+      const scoreFromUrl = urlParams.get("score");
+
+      const response = await fetch(`/api/challenges/${challengeId}`);
+    
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Challenge API error:", response.status, errorData);
+        throw new Error(
+          `Failed to fetch challenge info: ${
+            errorData.error || response.statusText
+          }`
+        );
+      }
+
+      const data = await response.json();
+
+      setChallengeInfo({
+        fromId: challengeId,
+        username: data.challengeInfo.username,
+        // Use score from URL if available, otherwise use from API
+        score: scoreFromUrl ? parseInt(scoreFromUrl) : data.challengeInfo.score,
+      });
+    } catch (error) {
+      console.error(
+        "Error fetching challenge info:",
+        error,
+        "Challenge ID:",
+        challengeId
+      );
+    }
+  };
+
   useEffect(() => {
-    // Check if game should end (10 questions answered)
+    // Check if game should end (questionCount questions answered)
     if (
-      score.correct + score.incorrect === 10 &&
+      score.correct + score.incorrect === questionCount &&
       !gameComplete &&
       selectedOption
     ) {
@@ -48,6 +104,8 @@ const QuizGame = () => {
   }, [score, selectedOption, gameComplete]);
 
   const generateNewQuestion = (data) => {
+    if (!data || data.length === 0) return;
+
     // Reset state for new question
     setSelectedOption(null);
     setIsCorrect(null);
@@ -108,7 +166,7 @@ const QuizGame = () => {
   };
 
   const handleNextQuestion = () => {
-    if (score.correct + score.incorrect < 10) {
+    if (score.correct + score.incorrect < questionCount) {
       generateNewQuestion(destinations);
     }
   };
@@ -119,9 +177,55 @@ const QuizGame = () => {
     generateNewQuestion(destinations);
   };
 
-  const dismissChallengeInfo = () => {
-    setChallengeInfo(null);
+  // This is now simplified since SharePopup handles username entry
+  const handleChallengeClick = () => {
+    // Set challengeInfo to include showSharePopup flag
+    // The SharePopup component will now handle all username collection
+    const newChallengeInfo = {
+      ...challengeInfo,
+      showSharePopup: true,
+      isNewChallenge: true,
+    };
+
+    setChallengeInfo(newChallengeInfo);
   };
+
+  // Function to update username when it's set from SharePopup
+  // This can be called from GameResultModal if needed
+  const updateUsername = (newUsername) => {
+    setUsername(newUsername);
+    sessionStorage.setItem("quizUsername", newUsername);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="purple-card p-8 text-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-8 w-32 bg-purple-200 rounded mb-4"></div>
+          <div className="h-24 w-full bg-purple-100 rounded mb-4"></div>
+          <div className="h-10 w-full bg-purple-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="purple-card p-8 text-center">
+        <h3 className="text-xl font-bold text-red-500 mb-4">
+          Error Loading Game
+        </h3>
+        <p className="mb-4">{error}</p>
+        <StylizedButton
+          variant="primary"
+          size="medium"
+          onClick={() => window.location.reload()}
+        >
+          Try Again
+        </StylizedButton>
+      </div>
+    );
+  }
 
   if (!currentQuestion) {
     return (
@@ -142,21 +246,22 @@ const QuizGame = () => {
         <div className="score-indicators flex justify-center gap-6 w-full max-w-8xl mx-auto">
           <div className="score-tile correct rounded-lg flex flex-col items-center">
             <span className="score-value font-bold text-xl p-3 bg-green-200">
-              {score.correct}/10
+              {score.correct}/{questionCount}
             </span>
             <span className="score-label text-sm">Correct</span>
           </div>
 
           <div className="score-tile total rounded-lg flex flex-col items-center">
             <span className="score-value font-bold text-xl p-3 bg-blue-200">
-              {Math.min(score.correct + score.incorrect, 10)}/10
+              {Math.min(score.correct + score.incorrect, questionCount)}
+              /{questionCount}
             </span>
             <span className="score-label text-sm">Total</span>
           </div>
 
           <div className="score-tile incorrect rounded-lg flex flex-col items-center">
             <span className="score-value font-bold text-xl p-3 bg-red-200">
-              {score.incorrect}/10
+              {score.incorrect}/{questionCount}
             </span>
             <span className="score-label text-sm">Incorrect</span>
           </div>
@@ -166,7 +271,9 @@ const QuizGame = () => {
               <span className="score-value font-bold text-xl p-3 bg-purple-200">
                 {challengeInfo.score}/10
               </span>
-              <span className="score-label text-sm">Friend`s Score</span>
+              <span className="score-label text-sm">
+                {challengeInfo.username}`s Score
+              </span>
             </div>
           )}
         </div>
@@ -179,19 +286,44 @@ const QuizGame = () => {
             score={score}
             onRestart={restartGame}
             challengeInfo={challengeInfo}
+            onChallengeClick={handleChallengeClick}
+            username={username}
           />
         </div>
       )}
 
       {/* Added space to account for fixed header */}
-      <div className="mt-24 w-full max-w-6xl">
+      <div className="mt-30 w-full max-w-4xl">
         {/* Main game container */}
         {showConfetti && <Confetti />}
+
+        {selectedOption && (
+          <div
+            className={`p-4 rounded-lg mb-4 shadow-sm ${
+              isCorrect
+                ? "bg-gradient-to-r from-green-50 to-purple-50 border-l-4 border-green-500"
+                : "bg-gradient-to-r from-red-50 to-purple-50 border-l-4 border-red-500"
+            }`}
+          >
+            <div className="flex items-start">
+              <span className="text-3xl mr-3">{isCorrect ? "🎉" : "😢"}</span>
+              <div>
+                <h3 className="text-xl font-bold mb-1">
+                  {isCorrect ? "Correct!" : "Not quite right..."}
+                </h3>
+                <p className="text-lg">
+                  <span className="font-semibold">Fun Fact:</span> {funFact}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="purple-card p-6 w-full">
           <div>
             <div className="text-center mb-6">
               <h2 className="text-3xl font-bold mb-2 text-accent">
-                Where am I?
+                Guess the City?
               </h2>
               <div className="h-1 w-16 mx-auto bg-accent"></div>
             </div>
@@ -233,36 +365,12 @@ const QuizGame = () => {
                 </button>
               ))}
             </div>
-
-            {selectedOption && (
-              <div
-                className={`p-4 rounded-lg mb-4 shadow-sm ${
-                  isCorrect
-                    ? "bg-gradient-to-r from-green-50 to-purple-50 border-l-4 border-green-500"
-                    : "bg-gradient-to-r from-red-50 to-purple-50 border-l-4 border-red-500"
-                }`}
-              >
-                <div className="flex items-start">
-                  <span className="text-3xl mr-3">
-                    {isCorrect ? "🎉" : "😢"}
-                  </span>
-                  <div>
-                    <h3 className="text-xl font-bold mb-1">
-                      {isCorrect ? "Correct!" : "Not quite right..."}
-                    </h3>
-                    <p className="text-lg">
-                      <span className="font-semibold">Fun Fact:</span> {funFact}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Next Destination button outside the game box - only show if game is not complete */}
         {selectedOption && !gameComplete && (
-          <div className="w-full mt-4 mb-6">
+          <div className="w-full my-3 mx-auto">
             <StylizedButton
               variant="primary"
               size="large"

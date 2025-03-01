@@ -2,9 +2,15 @@
 import React, { useState, useEffect } from "react";
 import StylizedButton from "./StylizedButton";
 import SharePopup from "./SharePopup";
-import { Trophy, Frown, ArrowRightLeft } from "lucide-react";
+import { Trophy, Frown, ArrowRightLeft, Share2, User } from "lucide-react";
 
-const GameResultModal = ({ score, onRestart, challengeInfo }) => {
+const GameResultModal = ({
+  score,
+  onRestart,
+  challengeInfo,
+  onChallengeClick,
+  username,
+}) => {
   const [showSharePopup, setShowSharePopup] = useState(false);
   const [comparisonResult, setComparisonResult] = useState(null);
   const totalQuestions = 10;
@@ -30,29 +36,41 @@ const GameResultModal = ({ score, onRestart, challengeInfo }) => {
   // Determine challenge result when component mounts
   useEffect(() => {
     if (challengeInfo) {
-      if (score.correct > challengeInfo.score) {
-        setComparisonResult({
-          status: "win",
-          message: "You beat your friend's score!",
-          icon: <Trophy className="w-6 h-6 text-yellow-500" />,
-        });
-      } else if (score.correct < challengeInfo.score) {
-        setComparisonResult({
-          status: "loss",
-          message: "Your friend scored higher. Try again?",
-          icon: <Frown className="w-6 h-6 text-blue-500" />,
-        });
+      // Skip showing comparison result if this is a new challenge we're creating
+      if (challengeInfo.isNewChallenge) {
+        // Don't set comparison result for challenges we're creating
+        setComparisonResult(null);
       } else {
-        setComparisonResult({
-          status: "draw",
-          message: "You tied with your friend!",
-          icon: <ArrowRightLeft className="w-6 h-6 text-purple-500" />,
-        });
+        // Only show comparison for challenges we're responding to
+        if (score.correct > challengeInfo.score) {
+          setComparisonResult({
+            status: "win",
+            message: "You beat your friend's score!",
+            icon: <Trophy className="w-6 h-6 text-yellow-500" />,
+          });
+        } else if (score.correct < challengeInfo.score) {
+          setComparisonResult({
+            status: "loss",
+            message: "Your friend scored higher. Try again?",
+            icon: <Frown className="w-6 h-6 text-blue-500" />,
+          });
+        } else {
+          setComparisonResult({
+            status: "draw",
+            message: "You tied with your friend!",
+            icon: <ArrowRightLeft className="w-6 h-6 text-purple-500" />,
+          });
+        }
       }
+    }
+
+    if (challengeInfo && challengeInfo.showSharePopup) {
+      setShowSharePopup(true);
     }
   }, [score, challengeInfo]);
 
   const handleChallengeClick = () => {
+    // Show the share popup directly - username collection is now handled there
     setShowSharePopup(true);
   };
 
@@ -70,6 +88,14 @@ const GameResultModal = ({ score, onRestart, challengeInfo }) => {
             Quiz Complete!
           </h2>
           <div className="h-1 w-16 mx-auto mb-6 bg-accent"></div>
+
+          {/* User information display */}
+          {username && (
+            <div className="flex items-center mb-4 px-4 py-2 bg-accent-light rounded-full">
+              <User className="w-5 h-5 mr-2 text-accent" />
+              <span className="font-medium text-accent">{username}</span>
+            </div>
+          )}
 
           <div className="score-display flex items-center justify-center w-32 h-32 rounded-full bg-accent-light mb-6">
             <span className="text-4xl font-bold text-accent">
@@ -95,8 +121,8 @@ const GameResultModal = ({ score, onRestart, challengeInfo }) => {
               <div>
                 <p className="font-medium">{comparisonResult.message}</p>
                 <p className="text-sm text-gray-600">
-                  Your score: {score.correct} / Friend`s score:{" "}
-                  {challengeInfo?.score}
+                  Your score: {score.correct} / {challengeInfo?.username}`s
+                  score: {challengeInfo?.score}
                 </p>
               </div>
             </div>
@@ -139,7 +165,9 @@ const GameResultModal = ({ score, onRestart, challengeInfo }) => {
               size="large"
               fullWidth={true}
               onClick={handleChallengeClick}
+              className="flex items-center justify-center"
             >
+              <Share2 className="w-5 h-5 mr-2" />
               Challenge a Friend
             </StylizedButton>
           </div>
@@ -154,6 +182,9 @@ const GameResultModal = ({ score, onRestart, challengeInfo }) => {
           emoji={emoji}
           comparisonResult={comparisonResult}
           challengeInfo={challengeInfo}
+          username={username}
+          // We no longer need to pass a separate onUsernameSubmit function
+          // as the SharePopup now handles saving the username internally
         />
       )}
     </div>
